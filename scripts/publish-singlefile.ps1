@@ -1,4 +1,4 @@
-# Mermaid completo (WebView2 + JS embedded). Consigliato: profilo Fx = un solo .exe leggero, senza estrarre il runtime .NET.
+# Mermaid completo (WebView2 + JS embedded). Profilo Fx: un solo .exe (WebView2Loader e altri file estratti in TEMP al primo avvio).
 # Prerequisito sul PC destinazione (profilo Fx): .NET 8 Desktop Runtime + WebView2 (di solito gia' su Windows 11).
 param(
     [ValidateSet('Fx', 'SelfContained')]
