@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>WinExe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <EnableWindowsFormsHighDpiAutoResizing>true</EnableWindowsFormsHighDpiAutoResizing>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+
+    <!-- Single-file: usa `dotnet publish -p:PublishProfile=...` (vedi Properties\PublishProfiles). -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Build-time download (runtime is fully offline) -->
+    <MermaidJsUrl>https://unpkg.com/mermaid@10/dist/mermaid.min.js</MermaidJsUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3912.50" />
+  </ItemGroup>
+
+  <!-- WinForms-only: WebView2 NuGet also ships a WPF assembly; drop it to avoid MSB3277 (WindowsBase 4 vs 5). -->
+  <Target Name="RemoveWebView2WpfReference" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Mermaid JS embedded inside the exe -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(IntermediateOutputPath)mermaid.min.js">
+      <LogicalName>MermaidViewer.Assets.mermaid.min.js</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- Ensure mermaid.min.js is available at build/publish time -->
+  <Target Name="EnsureMermaidJs" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_MermaidOut>$(IntermediateOutputPath)mermaid.min.js</_MermaidOut>
+      <_MermaidLocal>$(MSBuildProjectDirectory)\Assets\mermaid.min.js</_MermaidLocal>
+    </PropertyGroup>
+
+    <!-- Prefer a local checked-in copy if present -->
+    <Copy SourceFiles="$(_MermaidLocal)" DestinationFiles="$(_MermaidOut)"
+          Condition="Exists('$(_MermaidLocal)') and !Exists('$(_MermaidOut)')" />
+
+    <!-- Otherwise download during build -->
+    <Exec Condition="!Exists('$(_MermaidOut)')"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$ErrorActionPreference='Stop'; New-Item -ItemType Directory -Force -Path '$(IntermediateOutputPath)' | Out-Null; Invoke-WebRequest -Uri '$(MermaidJsUrl)' -OutFile '$(_MermaidOut)'&quot;" />
+  </Target>
+
+</Project>
